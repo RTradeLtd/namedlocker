@@ -24,8 +24,8 @@ type Store struct {
 }
 
 // New creates a new named locker
-func New() Store {
-	return Store{refs: make(map[string]*ref)}
+func New() *Store {
+	return &Store{refs: make(map[string]*ref)}
 }
 
 // Lock acquires a lock on key.

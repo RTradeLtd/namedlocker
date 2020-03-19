@@ -6,14 +6,6 @@ import (
 	"testing"
 )
 
-func Example() {
-	sto := New()
-	sto.Lock("my-key")
-	defer sto.Unlock("my-key")
-
-	// do some work...
-}
-
 func TestStore(t *testing.T) {
 	sto := New()
 	sto.Lock("hello")
@@ -21,6 +13,18 @@ func TestStore(t *testing.T) {
 
 	sto.RLock("hello")
 	sto.TryRUnlock("hello")
+	defer t.Run("RLockPanic", func(t *testing.T) {
+		go func() {
+			defer recover()
+			sto.TryRUnlock("hello")
+		}()
+	})
+	defer t.Run("LockPanic", func(t *testing.T) {
+		go func() {
+			defer recover()
+			sto.TryUnlock("hello")
+		}()
+	})
 }
 
 func BenchmarkSyncStore(b *testing.B) {
