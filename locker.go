@@ -9,39 +9,59 @@ import (
 var (
 	// ErrUnlockOfUnlockedKey is the error reported when unlocking an unlocked key.
 	ErrUnlockOfUnlockedKey = errors.New("unlock of unlocked key")
-
-	pool = sync.Pool{New: func() interface{} { return &ref{} }}
 )
 
 type ref struct {
-	sync.Mutex
-	cnt int32
+	sync.RWMutex
 }
 
 // Store is an in-memory store of named locks.
 //
-// The zero-value is usable as-is.
+// The zero-value is not usable
 type Store struct {
-	mu   sync.Mutex
+	mu   sync.RWMutex
 	refs map[string]*ref
+}
+
+// New creates a new named locker
+func New() Store {
+	return Store{refs: make(map[string]*ref)}
 }
 
 // Lock acquires a lock on key.
 // If key is locked, it blocks until it can be acquired.
 func (s *Store) Lock(key string) {
 	s.mu.Lock()
-	r, ok := s.refs[key]
-	if !ok {
-		r = pool.Get().(*ref)
-		if s.refs == nil {
-			s.refs = map[string]*ref{}
-		}
-		s.refs[key] = r
+	if _, ok := s.refs[key]; !ok {
+		s.refs[key] = new(ref)
 	}
-	r.cnt++
 	s.mu.Unlock()
+	s.refs[key].Lock()
+}
 
-	r.Lock()
+// RLock acquires a read lock on key.
+// If key is locked, it blocks until it can be acquired.
+func (s *Store) RLock(key string) {
+	s.mu.Lock()
+	if _, ok := s.refs[key]; !ok {
+		s.refs[key] = new(ref)
+	}
+	s.mu.Unlock()
+	s.refs[key].RLock()
+}
+
+// RUnlock is a wrapper around TryRUnlock that panics if it returns an error
+func (s *Store) RUnlock(key string) {
+	if err := s.TryRUnlock(key); err != nil {
+		panic(err)
+	}
+}
+
+// Unlock is a wrapper around TryUnlock that panics if it returns an error.
+func (s *Store) Unlock(key string) {
+	if err := s.TryUnlock(key); err != nil {
+		panic(err)
+	}
 }
 
 // TryUnlock releases the lock on key.
@@ -49,26 +69,25 @@ func (s *Store) Lock(key string) {
 // If key is not locked, ErrUnlockOfUnlockedKey is returned.
 func (s *Store) TryUnlock(key string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	r, ok := s.refs[key]
-	if !ok || r.cnt <= 0 {
-		// should we panic if cnt is < 0? that suggests some state got corrupted.
+	if _, ok := s.refs[key]; !ok {
+		s.mu.Unlock()
 		return ErrUnlockOfUnlockedKey
 	}
-	r.Unlock()
-	r.cnt--
-	if r.cnt == 0 {
-		delete(s.refs, key)
-		pool.Put(r)
-	}
+	s.refs[key].Unlock()
+	s.mu.Unlock()
 	return nil
 }
 
-// Unlock is a wrapper around TryUnlock that panics if it returns an error.
-func (s *Store) Unlock(key string) {
-	err := s.TryUnlock(key)
-	if err != nil {
-		panic(err)
+// TryRUnlock releases the read lock on key.
+//
+// If key is not locked, ErrUnlockOfUnlockedKey is returned.
+func (s *Store) TryRUnlock(key string) error {
+	s.mu.Lock()
+	if _, ok := s.refs[key]; !ok {
+		s.mu.Unlock()
+		return ErrUnlockOfUnlockedKey
 	}
+	s.refs[key].RUnlock()
+	s.mu.Unlock()
+	return nil
 }

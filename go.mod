@@ -1,3 +1,3 @@
-module oya.to/namedlocker
+module github.com/RTradeLtd/namedlocker
 
 go 1.14
