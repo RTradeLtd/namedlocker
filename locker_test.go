@@ -9,26 +9,15 @@ import (
 func TestStore(t *testing.T) {
 	sto := New()
 	sto.Lock("hello")
-	sto.TryUnlock("hello")
-
-	sto.RLock("hello")
-	sto.TryRUnlock("hello")
-}
-
-func TestStorePanicRLock(t *testing.T) {
-	sto := New()
-	func() {
-		defer recover()
-		sto.TryRUnlock("hello")
-	}()
-}
-
-func TestStorePanicLock(t *testing.T) {
-	sto := New()
-	func() {
-		defer recover()
-		sto.TryUnlock("hello")
-	}()
+	sto.Unlock("hello")
+	if err := sto.TryUnlock("nokey"); err == nil {
+		t.Fatal("error expected")
+	}
+	sto.RLock("key")
+	sto.RUnlock("key")
+	if err := sto.TryRUnlock("nokey"); err == nil {
+		t.Fatal("error expected")
+	}
 }
 
 func BenchmarkSyncStore(b *testing.B) {
