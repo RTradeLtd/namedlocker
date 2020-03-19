@@ -52,22 +52,22 @@ func (s *Store) RLock(key string) {
 
 // RUnlock is a wrapper around TryRUnlock that panics if it returns an error
 func (s *Store) RUnlock(key string) {
-	if err := s.TryRUnlock(key); err != nil {
+	if err := s.tryRUnlock(key); err != nil {
 		panic(err)
 	}
 }
 
 // Unlock is a wrapper around TryUnlock that panics if it returns an error.
 func (s *Store) Unlock(key string) {
-	if err := s.TryUnlock(key); err != nil {
+	if err := s.tryUnlock(key); err != nil {
 		panic(err)
 	}
 }
 
-// TryUnlock releases the lock on key.
+// tryUnlock releases the lock on key.
 //
 // If key is not locked, ErrUnlockOfUnlockedKey is returned.
-func (s *Store) TryUnlock(key string) error {
+func (s *Store) tryUnlock(key string) error {
 	s.mu.Lock()
 	if _, ok := s.refs[key]; !ok {
 		s.mu.Unlock()
@@ -78,10 +78,10 @@ func (s *Store) TryUnlock(key string) error {
 	return nil
 }
 
-// TryRUnlock releases the read lock on key.
+// tryRUnlock releases the read lock on key.
 //
 // If key is not locked, ErrUnlockOfUnlockedKey is returned.
-func (s *Store) TryRUnlock(key string) error {
+func (s *Store) tryRUnlock(key string) error {
 	s.mu.Lock()
 	if _, ok := s.refs[key]; !ok {
 		s.mu.Unlock()

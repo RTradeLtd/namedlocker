@@ -10,12 +10,12 @@ func TestStore(t *testing.T) {
 	sto := New()
 	sto.Lock("hello")
 	sto.Unlock("hello")
-	if err := sto.TryUnlock("nokey"); err == nil {
+	if err := sto.tryUnlock("nokey"); err == nil {
 		t.Fatal("error expected")
 	}
 	sto.RLock("key")
 	sto.RUnlock("key")
-	if err := sto.TryRUnlock("nokey"); err == nil {
+	if err := sto.tryRUnlock("nokey"); err == nil {
 		t.Fatal("error expected")
 	}
 }
