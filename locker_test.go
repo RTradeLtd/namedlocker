@@ -13,18 +13,22 @@ func TestStore(t *testing.T) {
 
 	sto.RLock("hello")
 	sto.TryRUnlock("hello")
-	defer t.Run("RLockPanic", func(t *testing.T) {
-		go func() {
-			defer recover()
-			sto.TryRUnlock("hello")
-		}()
-	})
-	defer t.Run("LockPanic", func(t *testing.T) {
-		go func() {
-			defer recover()
-			sto.TryUnlock("hello")
-		}()
-	})
+}
+
+func TestStorePanicRLock(t *testing.T) {
+	sto := New()
+	func() {
+		defer recover()
+		sto.TryRUnlock("hello")
+	}()
+}
+
+func TestStorePanicLock(t *testing.T) {
+	sto := New()
+	func() {
+		defer recover()
+		sto.TryUnlock("hello")
+	}()
 }
 
 func BenchmarkSyncStore(b *testing.B) {
